@@ -1,7 +1,6 @@
 import numpy as np
-from tqdm import tqdm
 
-class DFO:
+class DfoModel:
     def __init__(self, k: int, max_iter=100, tol=1e-4, verbose=False):
         self.k = k
         self.max_iter = max_iter
@@ -86,6 +85,6 @@ if __name__ == "__main__":
     y = X[:, random_indices] @ indices_weights + np.random.randn(n_samples) * 0.1  # Linear combination with noise
 
     print("\n\nOptimizing with DFO...")
-    dfo = DFO(k=args.k, max_iter=args.max_iter, tol=args.tol, verbose=True)
+    dfo = DfoModel(k=args.k, max_iter=args.max_iter, tol=args.tol, verbose=True)
     beta = dfo.optimize(X, y)
     print("Optimized coefficients:", beta.round(3))
