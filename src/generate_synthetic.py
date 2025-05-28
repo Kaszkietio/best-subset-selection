@@ -3,9 +3,9 @@ import numpy as np
 class SyntheticDataGenerator:
     def data_1(self, n_samples: int, n_features: int, n_informative: int, ro: float, snr: float = 1.0):
         sigma = np.zeros((n_features, n_features))
-        offset = np.arange(n_features)
+        j = np.arange(n_features)
         for i in range(n_features):
-            sigma[i, :] = ro ** np.abs(offset - i)
+            sigma[i, :] = ro ** np.abs(i - j)
         X = np.random.multivariate_normal(np.zeros(n_features), sigma, n_samples)
         X = self._standardize_matrix(X)
 
@@ -58,9 +58,11 @@ class SyntheticDataGenerator:
         assert X.ndim == 2, "Input must be a 2D array"
         for feature in range(X.shape[1]):
             mean = np.mean(X[:, feature])
-            std = np.std(X[:, feature]) if X.shape[0] > 1 else 1.0
             X[:, feature] -= mean
-            X[:, feature] /= std
+            l2_norm = np.linalg.vector_norm(X[:, feature], ord=2) if X.shape[0] > 1 else 1.0
+            X[:, feature] /= l2_norm
+            # print(f"Feature {feature}: mean = {mean}, l2 norm = {l2_norm}")
+            # print(f"Standardized feature {feature}: mean = {np.mean(X[:, feature])}, l2 norm = {np.linalg.vector_norm(X[:, feature], ord=2)}")
         return X
 
 
