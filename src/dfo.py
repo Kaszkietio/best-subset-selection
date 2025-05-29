@@ -12,6 +12,7 @@ class DfoModel:
         if algorithm not in ['1', '2']:
             raise ValueError("Algorithm must be '1' or '2'")
         self.algorithm = algorithm
+        self.beta_start = None
 
     def optimize(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
         if self.algorithm == '1':
@@ -27,7 +28,7 @@ class DfoModel:
         # We need L >= lipshitz constant
         L = np.linalg.norm(X.T @ X, 2)
         alpha = 1 / L
-        beta = np.zeros((p,))
+        beta = self.beta_start if self.beta_start is not None else np.zeros((p,))
         val = self._objective(X, y, beta)
         if self.verbose:
             print(f"Using Lipschitz constant L = {L}, step size alpha = {alpha}")
@@ -74,7 +75,7 @@ class DfoModel:
         # We need L >= lipshitz constant
         L = np.linalg.norm(X.T @ X, 2)
         alpha = 1 / L
-        beta = np.zeros(p)
+        beta = self.beta_start if self.beta_start is not None else np.zeros(p)
         val = self._objective(X, y, beta)
         eta_list = []
         g_eta_list = []

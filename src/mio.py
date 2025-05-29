@@ -14,6 +14,8 @@ class BssMioModel:
             sos: bool = True,
             tighter_bounds: bool = True,
             time_limit: int = 500,
+            verbose: bool = True,
+            MIPFocus=None
     ):
         self.k = k
         self.tau = tau
@@ -21,6 +23,9 @@ class BssMioModel:
         self.sos = sos
         self.time_limit = time_limit
         self.tighter_bounds = tighter_bounds
+        self.verbose = verbose
+        self.beta_warm = None  # Warm start for beta, will be set by DFO model if provided
+        self.MIPFocus = MIPFocus
         if not dfo and self.tighter_bounds:
             warn("Tighter bounds are enabled, but no DFO model is provided. " \
             "Model will throw if one of the 1-norm bounds cannot be computed.")
@@ -33,18 +38,19 @@ class BssMioModel:
 
     def optimize(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
         n, p = X.shape
-        self.beta_warm = self.dfo.optimize(X, y) if self.dfo else None
+        if self.beta_warm is None and self.dfo:
+            self.beta_warm = self.dfo.optimize(X, y)
         self._compute_bounds(X, y)
-        print(f"Upper bounds: beta_1={self.beta_1}, beta_inf={self.beta_inf}, x_beta_1={self.zeta_1}, x_beta_inf={self.zeta_inf}")
+        if self.verbose:
+            print(f"Upper bounds: beta_1={self.beta_1}, beta_inf={self.beta_inf}, x_beta_1={self.zeta_1}, x_beta_inf={self.zeta_inf}")
 
         # Create model
         model = gp.Model("subset_selection_f2.6")
-        model.setParam("OutputFlag", 1)
+        model.setParam("OutputFlag", 1 if self.verbose else 0)
         if self.time_limit:
             model.setParam("TimeLimit", self.time_limit)
-        model.setParam(GRB.param.MIPFocus, 3)
-        # model.setParam(GRB.param.MIPGap, 0.1)  # Set a MIP gap for early stopping
-        # model.setParam(GRB.param.SolutionNumber, 1)
+        if self.MIPFocus is not None:
+            model.setParam(GRB.param.MIPFocus, self.MIPFocus)
 
         # Variables
         beta = model.addVars(p, lb=-self.beta_inf, ub=self.beta_inf, vtype=GRB.CONTINUOUS, name="beta")
@@ -113,10 +119,17 @@ class BssMioModel:
         model.update()
 
         model.setObjective(obj, GRB.MINIMIZE)
-        model.optimize()
+        def incumbent_callback(model, where):
+            if where == GRB.Callback.MIP:
+                sol_count = model.cbGet(GRB.Callback.MIP_SOLCNT)
+                if sol_count > 0:
+                    model._incumbent_time = model.cbGet(GRB.Callback.RUNTIME)
+        model.optimize(incumbent_callback)
 
         beta_opt = np.array([beta[i].X for i in range(p)])
         self.model = model  # Store the model for later inspection if needed
+        self.beta_opt = beta_opt
+        self.incumbent_time = getattr(model, '_incumbent_time', None)
         return beta_opt, model.ObjVal, model.MIPGap, model.Status
 
 
@@ -126,10 +139,12 @@ class BssMioModel:
 
         # Create model
         model = gp.Model("subset_selection_f2.4")
-        model.setParam("OutputFlag", 1)
+        model.setParam("OutputFlag", 1 if self.verbose else 0)
         # https://support.gurobi.com/hc/en-us/community/posts/4409420791185-Optimal-solution-found-early-but-long-time-to-close-gap
         if self.time_limit:
             model.setParam("TimeLimit", self.time_limit)
+        if self.MIPFocus is not None:
+            model.setParam(GRB.param.MIPFocus, self.MIPFocus)
 
         # Variables
         beta = model.addVars(p, lb=-self.beta_inf, ub=self.beta_inf, vtype=GRB.CONTINUOUS, name="beta")
@@ -168,11 +183,18 @@ class BssMioModel:
         model.update()
 
         model.setObjective(obj, GRB.MINIMIZE)
-        model.optimize()
+        def incumbent_callback(model, where):
+            if where == GRB.Callback.MIP:
+                sol_count = model.cbGet(GRB.Callback.MIP_SOLCNT)
+                if sol_count == 1:
+                    model._incumbent_time = model.cbGet(GRB.Callback.RUNTIME)
+                    print(f"Incumbent found at time {model._incumbent_time:.2f} seconds")
+        model.optimize(incumbent_callback)
 
         beta_opt = np.array([beta[i].X for i in range(p)])
         self.model = model  # Store the model for later inspection if needed
         self.beta_opt = beta_opt
+        self.incumbent_time = getattr(model, '_incumbent_time', None)
         return beta_opt, model.ObjVal, model.MIPGap, model.Status
 
     def _compute_bounds(self, X: np.ndarray, y: np.ndarray) -> tuple:
