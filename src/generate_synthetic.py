@@ -66,8 +66,6 @@ class SyntheticDataGenerator:
             column = X[:, feature].copy()
             l2_norm = np.linalg.vector_norm(column, ord=2)
             X[:, feature] /= l2_norm
-            # print(f"Feature {feature}: mean = {mean}, l2 norm = {l2_norm}")
-            # print(f"Standardized feature {feature}: mean = {np.mean(X[:, feature])}, l2 norm = {np.linalg.vector_norm(X[:, feature], ord=2)}")
         return X
 
 

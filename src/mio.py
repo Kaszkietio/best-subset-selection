@@ -24,7 +24,8 @@ class BssMioModel:
         self.time_limit = time_limit
         self.tighter_bounds = tighter_bounds
         self.verbose = verbose
-        self.beta_warm = None  # Warm start for beta, will be set by DFO model if provided
+        # Warm start for beta, will be set by DFO model if provided
+        self.beta_warm = None
         self.MIPFocus = MIPFocus
         if not dfo and self.tighter_bounds:
             warn("Tighter bounds are enabled, but no DFO model is provided. " \
@@ -140,6 +141,7 @@ class BssMioModel:
         # Create model
         model = gp.Model("subset_selection_f2.4")
         model.setParam("OutputFlag", 1 if self.verbose else 0)
+
         # https://support.gurobi.com/hc/en-us/community/posts/4409420791185-Optimal-solution-found-early-but-long-time-to-close-gap
         if self.time_limit:
             model.setParam("TimeLimit", self.time_limit)
@@ -192,7 +194,8 @@ class BssMioModel:
         model.optimize(incumbent_callback)
 
         beta_opt = np.array([beta[i].X for i in range(p)])
-        self.model = model  # Store the model for later inspection if needed
+        # Store the model for later inspection if needed
+        self.model = model
         self.beta_opt = beta_opt
         self.incumbent_time = getattr(model, '_incumbent_time', None)
         return beta_opt, model.ObjVal, model.MIPGap, model.Status
@@ -205,22 +208,14 @@ class BssMioModel:
         else:
             coherence = np.abs(X.T @ X)
             np.fill_diagonal(coherence, 0)
-            # print("Coherence matrix:", coherence)
             mu = np.max(coherence)
-            # print("mu", mu)
             mu_k_1 = mu * (self.k - 1)
-            # print("mu_k_1", mu_k_1)
             if mu_k_1 < 1.0:
                 gamma_k = 1 - mu_k_1
-                # print("gamma_k", gamma_k)
-
                 target_corr = np.abs(X.T @ y)
-                # print("Target correlation:", target_corr)
                 self.beta_1 = np.sum(target_corr) / (1 - mu_k_1)
                 beta_inf_1 = np.sqrt(np.sum(target_corr**2, axis=0))/gamma_k
                 beta_inf_2 = np.linalg.vector_norm(y, ord=2)/np.sqrt(gamma_k)
-                # print("beta_inf_1:", beta_inf_1)
-                # print("beta_inf_2:", beta_inf_2)
                 self.beta_inf = np.min([beta_inf_1, beta_inf_2])
             else:
                 self.beta_1 = float('inf')
@@ -256,7 +251,7 @@ if __name__ == "__main__":
     start = default_timer()
     beta_opt, objective, mip_gap, status = bss_model.optimize(X, y)
     end = default_timer()
-    print("######### O")
+    print("#########")
     print("Optimization time:", end - start)
     print("Optimal beta:", np.nonzero(beta_opt))
     print("Warm start beta:", np.nonzero(bss_model.beta_warm) if bss_model.beta_warm is not None else None)
