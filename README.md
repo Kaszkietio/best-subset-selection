@@ -1,7 +1,7 @@
 # Best Subset Selection
 
 ## Overview
-This repository contains an implementation of algorithms for solving the Best Subset Selection problem using Mixed Integer Optimization (MIO). The Best Subset Selection problem is a fundamental problem in statistics and machine learning, where the goal is to select a subset of features that best predicts the target variable. The provided algorithms are based on the paper [*Best Subset Selection via a Modern Optimization Lens*](https://arxiv.org/abs/1507.03133) by Berstismas.
+This repository contains an implementation of algorithms for solving the Best Subset Selection problem using Mixed Integer Optimization (MIO). The Best Subset Selection problem is a fundamental problem in statistics and machine learning, where the goal is to select a subset of features that best predicts the target variable. The provided algorithms are based on the paper [*Best Subset Selection via a Modern Optimization Lens*](https://arxiv.org/abs/1507.03133) by Berstismas. Project was prepared for the *'Optimalisation in Data Analysis'* course.
 
 ## Features
 - **Mixed Integer Optimization (MIO):** Efficient implementation of MIO models for subset selection.
@@ -79,7 +79,7 @@ Results from experiments are stored in the `results/` directory. Subdirectories 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
 
 ## Author
-Wojciech Kutak
+Wojciech Kutak, Kinga Frańczak
 
 ## Acknowledgments
 - Gurobi Optimizer for providing tools for Mixed Integer Optimization.
