@@ -1,0 +1,6 @@
+gurobipy
+numpy
+scipy
+pandas
+matplotlib
+ipykernel
